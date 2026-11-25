@@ -30,6 +30,11 @@ h1{font:800 clamp(1.9rem,3.6vw,2.9rem)/1.08 "Archivo";letter-spacing:-.025em;mar
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .btn{font:600 .95rem "Archivo";padding:8px 14px;border:1px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;border-radius:2px}
 .btn.on{background:var(--hide);border-color:var(--hide);color:#fff}
+.chk{display:inline-flex;gap:6px;align-items:center;font:600 .95rem "Archivo";cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--accent)}
+.where{font-size:.92rem;margin:2px 0 0}.where b{font-weight:800}
+.scale{display:flex;align-items:center;gap:8px;font:500 .78rem "Archivo Narrow";color:var(--muted)}
+.scale i{display:block;width:120px;height:8px;background:linear-gradient(90deg,rgba(66,10,104,.1),#932667,#dd513a,#fca50a,#fcffa4)}
 .btn:focus-visible,.thumbs button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 .model{border-top:1px solid var(--rule);padding-top:12px}
@@ -66,16 +71,18 @@ footer a{color:var(--muted)}
 <p class="lead">A popular Kaggle set sorts 7,135 chest X-rays into COVID-19, normal, pneumonia and tuberculosis, and models trained on it report about 98%. Here the same kind of model runs in your browser, at full size and pruned 42 times smaller. Press <b>Hide the lungs</b> to see what a model trained only on the edges of the image still gets right.</p>
 
 <div class="viewer" id="viewer">
-  <div class="film"><canvas id="film" width="640" height="640" aria-label="Chest X-ray"></canvas><span class="tag" id="tag"></span></div>
+  <div class="film"><canvas id="film" width="640" height="640" aria-label="Chest X-ray with the model's heat map"></canvas><span class="tag" id="tag"></span></div>
   <div class="side">
     <div>
       <div class="thumbs" id="thumbs" role="group" aria-label="Sample X-rays"></div>
       <div class="row" style="margin-top:10px">
         <label class="btn" for="file">Use your own X-ray</label><input type="file" id="file" accept="image/*">
         <button class="btn" id="hide" aria-pressed="false">Hide the lungs</button>
+        <label class="chk"><input type="checkbox" id="heat" checked> Heat map</label>
         <span class="ms" id="state">Loading models…</span>
       </div>
     </div>
+    <div id="where"></div>
     <div class="model normal-only" id="m-full"></div>
     <div class="model normal-only" id="m-small"></div>
     <div class="model edges" id="m-edges"></div>
@@ -101,6 +108,29 @@ footer a{color:var(--muted)}
         </tbody>
       </table>
       <p class="small">The one pair from the same source, normal against pneumonia, is where the model has to look at the lungs: 90.5% there, against 98.7% on a validation split cut from the training images.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Where the full model looks</h2>
+  <div class="two">
+    <div>
+      <p>The heat map is a class activation map: ResNet-18 ends in an average over a 5 by 5 grid of features followed by one linear layer, so the evidence for each answer can be read off that grid exactly. Red and yellow mark the regions that pushed the model toward its answer.</p>
+      <p>Over the 771 test images, about 56% of the evidence for the answer falls inside the central area that holds the lungs. That area is 49% of the image, so the model favours the lungs only slightly; a third to a half of its evidence comes from the borders, where the collections differ.</p>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>Test images, by true class</th><th>Evidence inside lung area (median)</th></tr></thead>
+        <tbody>
+          <tr><td>COVID-19</td><td>62%</td></tr>
+          <tr><td>Normal</td><td>59%</td></tr>
+          <tr><td>Pneumonia</td><td>55%</td></tr>
+          <tr><td>Tuberculosis</td><td>65%</td></tr>
+          <tr><td>All 771</td><td class="k">56%</td></tr>
+        </tbody>
+      </table>
+      <p class="small">The lung area is the central 70% by 70% that the lungs-hidden experiment blacks out; if the evidence were spread evenly, 49% would fall inside it. The 5 by 5 grid is coarse, so the map shows regions, not fine detail.</p>
     </div>
   </div>
 </section>
@@ -138,7 +168,34 @@ const MODELS = {full: {parts: [0, 1, 2, 3].map(i => `models/full.int8.part${i}`)
                 small: {parts: ["models/small.int8.onnx"], name: "70% pruned", meta: "8-bit · 1.0 MB"},
                 edges: {parts: [0, 1, 2, 3].map(i => `models/edges.int8.part${i}`), name: "Trained on the edges only", meta: "never saw the lungs · 8-bit"}};
 const $ = id => document.getElementById(id), film = $("film"), fctx = film.getContext("2d");
-let sess = {}, img = null, hidden = false, samples = [];
+let sess = {}, img = null, hidden = false, samples = [], lastCam = null;
+// inferno-like colour map, transparent at low values
+const STOPS = [[0, [0, 0, 4]], [0.2, [66, 10, 104]], [0.45, [147, 38, 103]], [0.65, [221, 81, 58]], [0.85, [252, 165, 10]], [1, [252, 255, 164]]];
+const LUT = Array.from({length: 256}, (_, i) => { const t = i / 255; let k = 1; while (t > STOPS[k][0]) k++;
+  const [a, ca] = STOPS[k - 1], [b, cb] = STOPS[k], u = (t - a) / (b - a); return ca.map((c, j) => Math.round(c + u * (cb[j] - c))); });
+function upsample(cam, n, out) {           // bilinear, same as torch align_corners=False
+  const g = new Float32Array(out * out), sc = n / out;
+  for (let y = 0; y < out; y++) for (let x = 0; x < out; x++) {
+    let fy = (y + 0.5) * sc - 0.5, fx = (x + 0.5) * sc - 0.5; fy = Math.min(Math.max(fy, 0), n - 1); fx = Math.min(Math.max(fx, 0), n - 1);
+    const y0 = Math.floor(fy), x0 = Math.floor(fx), y1 = Math.min(y0 + 1, n - 1), x1 = Math.min(x0 + 1, n - 1), dy = fy - y0, dx = fx - x0;
+    g[y * out + x] = (cam[y0*n+x0] * (1-dx) + cam[y0*n+x1] * dx) * (1-dy) + (cam[y1*n+x0] * (1-dx) + cam[y1*n+x1] * dx) * dy;
+  }
+  return g;
+}
+function camFor(out, k) { const c = out.cam, n = c.dims[2], a = c.data.slice(k * n * n, (k + 1) * n * n); return {n, a}; }
+function drawHeat(cm, masked) {
+  const up = upsample(cm.a, cm.n, S); let mx = 0, inside = 0, total = 0;
+  for (let i = 0; i < up.length; i++) { up[i] = Math.max(0, up[i]); mx = Math.max(mx, up[i]); total += up[i];
+    const r = Math.floor(i / S), q = i % S; if (r >= 24 && r < 136 && q >= 24 && q < 136) inside += up[i]; }
+  if (mx <= 0) return null;
+  const c = document.createElement("canvas"); c.width = c.height = S; const g = c.getContext("2d"), im = g.createImageData(S, S);
+  for (let i = 0; i < up.length; i++) { const t = up[i] / mx, col = LUT[Math.round(t * 255)], al = t < 0.3 ? 0 : Math.min(0.8, Math.pow((t - 0.3) / 0.7, 0.8) * 0.8);
+    if (masked) { const r = Math.floor(i / S), q = i % S; if (r >= 24 && r < 136 && q >= 24 && q < 136) { im.data[4*i+3] = 0; continue; } }
+    im.data[4*i] = col[0]; im.data[4*i+1] = col[1]; im.data[4*i+2] = col[2]; im.data[4*i+3] = Math.round(al * 255); }
+  g.putImageData(im, 0, 0); fctx.imageSmoothingEnabled = true; fctx.imageSmoothingQuality = "high"; fctx.drawImage(c, 0, 0, 640, 640);
+  fctx.setLineDash([8, 7]); fctx.strokeStyle = "rgba(233,238,241,.75)"; fctx.lineWidth = 2; fctx.strokeRect(96, 96, 448, 448); fctx.setLineDash([]);
+  return inside / total;
+}
 
 function tensor(image, mask) {
   const c = document.createElement("canvas"); c.width = c.height = S; const g = c.getContext("2d");
@@ -165,18 +222,29 @@ function show(id, key, p, ms) {
     <div class="ms">${ms.toFixed(1)} ms in this browser</div>`;
 }
 async function analyse() {
-  if (!img) return; drawFilm();
+  if (!img) return; drawFilm(); lastCam = null;
   const keys = hidden ? ["edges"] : ["full", "small"];
   for (const key of keys) {
     const x = tensor(img, key === "edges"), t0 = performance.now();
     const out = await sess[key].run({image: x}); const ms = performance.now() - t0;
-    show("m-" + key, key, softmax(Array.from(out.logits.data)), ms);
+    const p = softmax(Array.from(out.logits.data)); show("m-" + key, key, p, ms);
+    if (out.cam) lastCam = {cam: camFor(out, p.indexOf(Math.max(...p))), label: CL[p.indexOf(Math.max(...p))], key};
   }
-  $("viewer").classList.toggle("hidden-on", hidden);
+  $("viewer").classList.toggle("hidden-on", hidden); paintHeat();
+}
+function paintHeat() {
+  drawFilm(); const w = $("where");
+  if (!lastCam || !$("heat").checked) { w.innerHTML = ""; return; }
+  const masked = lastCam.key === "edges", share = drawHeat(lastCam.cam, masked);
+  const who = lastCam.key === "edges" ? "The edges-only model" : "The full model";
+  w.innerHTML = masked ? `<p class="where">${who} answered <b>${lastCam.label}</b> without seeing the lungs. The heat shows which parts of the border it used.</p>`
+    : `<p class="where">${who} answered <b>${lastCam.label}</b>. Of the evidence for that answer, <b>${share === null ? "–" : Math.round(100 * share) + "%"}</b> lies inside the dashed lung area, which covers 49% of the image.</p>
+    <div class="scale">less<i></i>more evidence for the answer</div>`;
 }
 function load(src, tag) { const im = new Image(); im.onload = () => { img = im; $("tag").textContent = tag; analyse(); }; im.src = src; }
 
 $("hide").onclick = () => { hidden = !hidden; $("hide").classList.toggle("on", hidden); $("hide").setAttribute("aria-pressed", hidden); $("hide").textContent = hidden ? "Show the lungs" : "Hide the lungs"; analyse(); };
+$("heat").onchange = paintHeat;
 $("file").onchange = e => { const f = e.target.files[0]; if (!f) return; [...$("thumbs").children].forEach(b => b.setAttribute("aria-pressed", false)); load(URL.createObjectURL(f), "Your image"); };
 
 async function bench() {
