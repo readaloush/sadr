@@ -1,0 +1,30 @@
+ratio 0.3: params 5.46M (48.9%), MACs 462M (49.7%); val acc right after pruning 0.0740
+  ep0 108s val acc 0.9717 N-vs-P 0.9751
+  ep1 100s val acc 0.9953 N-vs-P 0.9962
+  ep2 101s val acc 0.9937 N-vs-P 0.9943
+pruned30_ce TEST acc 0.8988 macroF1 0.92 N-vs-P 0.883
+ratio 0.3: params 5.46M (48.9%), MACs 462M (49.7%); val acc right after pruning 0.0740
+  ep0 164s val acc 0.9858 N-vs-P 0.9866
+  ep1 163s val acc 0.9906 N-vs-P 0.9904
+  ep2 153s val acc 0.9858 N-vs-P 0.9847
+pruned30_kd TEST acc 0.9079 macroF1 0.922 N-vs-P 0.8942
+ratio 0.5: params 2.80M (25.0%), MACs 248M (26.7%); val acc right after pruning 0.0740
+  ep0 54s val acc 0.9780 N-vs-P 0.9770
+  ep1 57s val acc 0.9921 N-vs-P 0.9923
+  ep2 57s val acc 0.9843 N-vs-P 0.9828
+pruned50_ce TEST acc 0.9001 macroF1 0.91 N-vs-P 0.8862
+ratio 0.5: params 2.80M (25.0%), MACs 248M (26.7%); val acc right after pruning 0.0740
+  ep0 106s val acc 0.9811 N-vs-P 0.9828
+  ep1 109s val acc 0.9827 N-vs-P 0.9789
+  ep2 106s val acc 0.9858 N-vs-P 0.9828
+pruned50_kd TEST acc 0.8936 macroF1 0.902 N-vs-P 0.8814
+ratio 0.7: params 1.00M (8.9%), MACs 96M (10.3%); val acc right after pruning 0.0740
+  ep0 37s val acc 0.9654 N-vs-P 0.9751
+  ep1 37s val acc 0.9654 N-vs-P 0.9732
+  ep2 40s val acc 0.9591 N-vs-P 0.9655
+pruned70_ce TEST acc 0.8975 macroF1 0.908 N-vs-P 0.8846
+ratio 0.7: params 1.00M (8.9%), MACs 96M (10.3%); val acc right after pruning 0.0740
+  ep0 89s val acc 0.9244 N-vs-P 0.9349
+  ep1 85s val acc 0.9685 N-vs-P 0.9770
+  ep2 84s val acc 0.9732 N-vs-P 0.9789
+pruned70_kd TEST acc 0.8911 macroF1 0.905 N-vs-P 0.875

@@ -1,0 +1,14 @@
+  ep0 169s val acc 0.8520 N-vs-P 0.8851
+  ep1 166s val acc 0.9543 N-vs-P 0.9636
+  ep2 165s val acc 0.9795 N-vs-P 0.9923
+  ep3 161s val acc 0.9858 N-vs-P 0.9885
+  ep4 163s val acc 0.9843 N-vs-P 0.9828
+  ep5 158s val acc 0.9890 N-vs-P 0.9866
+full TEST acc 0.9196 macroF1 0.934 N-vs-P 0.9054 [[103, 0, 0, 3], [0, 179, 55, 0], [0, 4, 386, 0], [0, 0, 0, 41]]
+  ep0 162s val acc 0.8882 N-vs-P 0.9138
+  ep1 163s val acc 0.8756 N-vs-P 0.9444
+  ep2 164s val acc 0.9465 N-vs-P 0.9483
+  ep3 162s val acc 0.9638 N-vs-P 0.9693
+  ep4 169s val acc 0.9685 N-vs-P 0.9674
+  ep5 173s val acc 0.9654 N-vs-P 0.9655
+masked TEST acc 0.8457 macroF1 0.843 N-vs-P 0.8333 [[91, 0, 3, 12], [0, 140, 90, 4], [0, 10, 380, 0], [0, 0, 0, 41]]
