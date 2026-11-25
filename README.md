@@ -32,6 +32,20 @@ Normal against pneumonia is the only pair from the same source, so it is the par
 
 Exact copies between test and train: none. Near-duplicates (NCC ≥ 0.95 on 64 × 64 thumbnails): 11 test images, all with the same label (`src/audit_dupes.py`). File names in the pneumonia class reuse "person" numbers in train and test, but such pairs are no more similar than random pairs, so they are not taken as the same patients.
 
+### Where the full model looks
+
+ResNet-18 ends in global average pooling over a 5 × 5 feature grid and one linear layer, so a class activation map (CAM) gives the evidence for each class exactly: its spatial mean plus the bias equals the logit (`src/cam.py`). For each test image, taking the predicted class, the share of positive evidence inside the central 70% × 70% area (the one the lungs-hidden experiment blacks out, 49% of the image):
+
+| True class | Median share inside the lung area |
+|---|---|
+| COVID-19 | 62% |
+| Normal | 59% |
+| Pneumonia | 55% |
+| Tuberculosis | 65% |
+| All 771 | 56% |
+
+If the evidence were spread evenly, 49% would fall inside. The model leans only slightly toward the lungs; a third to a half of its evidence comes from the borders. The demo draws this map over each image. The 5 × 5 grid is coarse: it locates regions, not lesions.
+
 ## 2. Making it small
 
 Teacher: ResNet-18 from ImageNet weights, 160 × 160 grayscale (repeated to three channels), 6 epochs, AdamW with a one-cycle schedule, light affine and brightness augmentation, class-weighted cross-entropy, 2 CPU threads. Validation: a stratified 10% of train + val. The 771 test images are scored once per model.
@@ -71,7 +85,7 @@ The demo measures the same on each visitor's device.
 
 ## Demo
 
-`docs/index.html` loads the int8 teacher (10.8 MB), the 70%-pruned int8 model (1.0 MB) and the int8 lungs-hidden model (10.8 MB); the two larger files are split into parts under 3.5 MB and joined in the browser. Images are resized to 160 × 160 in the browser; on the eight sample images the browser's labels match Python's. The samples are test images from the pediatric pneumonia set only (Kermany et al., CC BY 4.0).
+`docs/index.html` loads the int8 teacher with its CAM as a second output (10.8 MB), the 70%-pruned int8 model (1.0 MB) and the int8 lungs-hidden model, also with its CAM (10.8 MB); the two larger files are split into parts under 3.5 MB and joined in the browser. Images are resized to 160 × 160 in the browser; on the eight sample images the browser's labels match Python's. The samples are test images from the pediatric pneumonia set only (Kermany et al., CC BY 4.0).
 
 ## Run it
 
@@ -83,7 +97,7 @@ python meta.py && python cache.py
 python audit_meta.py && python audit_dupes.py
 python teacher.py full && python teacher.py masked
 for r in 0.3 0.5 0.7; do python prune.py $r ce; python prune.py $r kd; done
-python quant_bench.py && python stats.py && python export_demo.py
+python quant_bench.py && python stats.py && python export_demo.py && python cam.py
 ```
 
 ImageNet weights: torchvision `resnet18-f37072fd.pth`.
