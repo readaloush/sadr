@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sadr · is the chest X-ray model reading the lungs?</title>
+<meta name="description" content="A four-class chest X-ray classifier, made 42 times smaller, that still recognises tuberculosis with the lungs hidden. Runs in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=Archivo+Narrow:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--box:#E9EEF1;--panel:#F7F9FA;--ink:#13212B;--muted:#5A6A74;--rule:#CBD5DB;--film:#05090C;--accent:#0B6E8A;--hide:#B4261C;--bar:#9FB3BF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--box);color:var(--ink);font:400 17px/1.6 "Archivo",system-ui,sans-serif}
+.wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+header{display:flex;align-items:baseline;gap:12px;padding:40px 0 0;flex-wrap:wrap}
+.name{font:800 1.9rem/1 "Archivo";letter-spacing:-.02em}
+.name span{font-weight:500;color:var(--muted);margin-left:4px}
+header nav{margin-left:auto;font-size:.95rem}
+header nav a{color:var(--ink);margin-left:18px;text-underline-offset:3px;text-decoration-color:var(--bar)}
+h1{font:800 clamp(1.9rem,3.6vw,2.9rem)/1.08 "Archivo";letter-spacing:-.025em;margin:30px 0 12px;max-width:20ch}
+.lead{max-width:66ch;color:#33434d;margin:0 0 28px}
+.viewer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;background:var(--panel);border:1px solid var(--rule)}
+.film{background:var(--film);position:relative;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center}
+.film canvas{width:100%;height:100%;display:block}
+.film .tag{position:absolute;left:10px;bottom:10px;color:#E9EEF1;background:rgba(5,9,12,.78);padding:3px 8px;font:500 .8rem "Archivo Narrow"}
+.side{padding:22px 24px;display:flex;flex-direction:column;gap:16px}
+.thumbs{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.thumbs button{aspect-ratio:1;border:2px solid transparent;padding:0;background:#000 center/cover;cursor:pointer;border-radius:2px}
+.thumbs button[aria-pressed=true]{border-color:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{font:600 .95rem "Archivo";padding:8px 14px;border:1px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;border-radius:2px}
+.btn.on{background:var(--hide);border-color:var(--hide);color:#fff}
+.btn:focus-visible,.thumbs button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+.model{border-top:1px solid var(--rule);padding-top:12px}
+.model h3{margin:0;font:600 1rem "Archivo";display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.model h3 small{font:500 .82rem "Archivo Narrow";color:var(--muted)}
+.model .call{font:800 1.45rem/1.2 "Archivo";margin:4px 0 6px}
+.bars{display:grid;grid-template-columns:7.5em 1fr 3.4em;gap:3px 10px;font-size:.88rem;align-items:center}
+.bars .t{height:8px;background:#DCE4E8}.bars .f{height:100%;background:var(--bar)}.bars .top .f{background:var(--accent)}
+.bars .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.ms{font:500 .82rem "Archivo Narrow";color:var(--muted)}
+.edges{display:none}.hidden-on .edges{display:block}.hidden-on .normal-only{display:none}
+.note{font-size:.85rem;color:var(--muted)}
+section{padding:54px 0 0}
+section h2{font:800 1.6rem/1.2 "Archivo";letter-spacing:-.015em;margin:0 0 10px}
+section p{max-width:70ch}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+table{border-collapse:collapse;width:100%;font-size:.94rem;font-variant-numeric:tabular-nums;background:var(--panel);margin:10px 0 6px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--rule);text-align:right}
+th:first-child,td:first-child{text-align:left}
+thead th{font:600 .9rem "Archivo";border-bottom:2px solid var(--ink)}
+td.k{font-weight:800}
+.small{font-size:.86rem;color:var(--muted)}
+footer{padding:56px 0 64px;font-size:.86rem;color:var(--muted)}
+footer a{color:var(--muted)}
+@media (max-width:820px){.viewer,.two{grid-template-columns:1fr}.thumbs{grid-template-columns:repeat(4,1fr)}header nav{margin-left:0}header nav a{margin:0 16px 0 0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="name">Sadr<span lang="ar">صدر</span></div>
+<nav><a href="https://github.com/readaloush/sadr">Code and results</a><a href="https://readaloush.com">readaloush.com</a></nav></header>
+
+<h1>Is the chest X-ray model reading the lungs?</h1>
+<p class="lead">A popular Kaggle set sorts 7,135 chest X-rays into COVID-19, normal, pneumonia and tuberculosis, and models trained on it report about 98%. Here the same kind of model runs in your browser, at full size and pruned 42 times smaller. Press <b>Hide the lungs</b> to see what a model trained only on the edges of the image still gets right.</p>
+
+<div class="viewer" id="viewer">
+  <div class="film"><canvas id="film" width="640" height="640" aria-label="Chest X-ray"></canvas><span class="tag" id="tag"></span></div>
+  <div class="side">
+    <div>
+      <div class="thumbs" id="thumbs" role="group" aria-label="Sample X-rays"></div>
+      <div class="row" style="margin-top:10px">
+        <label class="btn" for="file">Use your own X-ray</label><input type="file" id="file" accept="image/*">
+        <button class="btn" id="hide" aria-pressed="false">Hide the lungs</button>
+        <span class="ms" id="state">Loading models…</span>
+      </div>
+    </div>
+    <div class="model normal-only" id="m-full"></div>
+    <div class="model normal-only" id="m-small"></div>
+    <div class="model edges" id="m-edges"></div>
+    <p class="note">Samples are test images from the pediatric pneumonia set (Kermany et al., CC BY 4.0) that the models never trained on. Your own image stays on your device. Research and education only, not for diagnosis.</p>
+  </div>
+</div>
+
+<section>
+  <h2>What the 92% is made of</h2>
+  <div class="two">
+    <div>
+      <p>Each class comes from a different collection. Normal and pneumonia images are children aged one to five from one hospital in Guangzhou; the tuberculosis images are all 512 by 512 PNG files; the COVID-19 images are JPGs gathered from many sources. A classifier that never sees a pixel, only the file type, gets every COVID-19 and tuberculosis test image right.</p>
+      <p>A ResNet-18 trained and tested with the centre 70% of every image blacked out, so it never sees the lungs, still reaches 84.6% and finds all 41 tuberculosis cases. On this set, much of the accuracy comes from where an image was taken, not from the disease.</p>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>Test set, 771 images</th><th>Accuracy</th><th>COVID-19</th><th>TB</th></tr></thead>
+        <tbody>
+          <tr><td>File type only, no pixels</td><td>69.6%</td><td>106 / 106</td><td>41 / 41</td></tr>
+          <tr><td>Image width and height only</td><td>77.6%</td><td>74 / 106</td><td>41 / 41</td></tr>
+          <tr><td>ResNet-18, lungs hidden</td><td>84.6%</td><td>91 / 106</td><td>41 / 41</td></tr>
+          <tr><td>ResNet-18, whole image</td><td class="k">92.0%</td><td>103 / 106</td><td>41 / 41</td></tr>
+        </tbody>
+      </table>
+      <p class="small">The one pair from the same source, normal against pneumonia, is where the model has to look at the lungs: 90.5% there, against 98.7% on a validation split cut from the training images.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Making it small</h2>
+  <p>Channel pruning removes whole filters, so the network actually gets cheaper; 8-bit quantization stores weights and activations as integers. Each pruned model was fine-tuned for three epochs, with and without distillation from the full model.</p>
+  <table>
+    <thead><tr><th>Model</th><th>Size</th><th>Latency</th><th>Accuracy (95% CI)</th><th>vs full</th></tr></thead>
+    <tbody>
+      <tr><td>ResNet-18, 32-bit</td><td>42.6 MB</td><td>14.2 ms</td><td>92.0 (90.0–93.8)</td><td>–</td></tr>
+      <tr><td>ResNet-18, 8-bit</td><td>10.8 MB</td><td>4.4 ms</td><td>92.0 (90.0–93.8)</td><td>0.0</td></tr>
+      <tr><td>30% of channels pruned</td><td>20.8 MB</td><td>8.1 ms</td><td>89.9 (87.5–92.0)</td><td>−2.1</td></tr>
+      <tr><td>50% pruned</td><td>10.7 MB</td><td>3.4 ms</td><td>90.0 (87.9–92.1)</td><td>−1.9</td></tr>
+      <tr><td>70% pruned</td><td>3.8 MB</td><td>2.6 ms</td><td>89.8 (87.7–91.8)</td><td>−2.2</td></tr>
+      <tr><td class="k">70% pruned, 8-bit</td><td class="k">1.0 MB</td><td class="k">1.2 ms</td><td>89.0 (86.9–91.2)</td><td>−3.0</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Latency: one image, one CPU thread, ONNX Runtime on an x86 server. Pruned rows without distillation; with distillation they were 89.1–90.8%, no better within noise. “vs full” in points, paired bootstrap; every pruned model is 1–3 points below the full one, and the loss barely depends on how much is pruned.</p>
+  <p id="local" class="small"></p>
+</section>
+
+<section>
+  <h2>How it was done</h2>
+  <p>ResNet-18 from ImageNet weights, 160 by 160 grayscale input, six epochs with light augmentation and class-weighted loss. Validation was a stratified 10% of the training images; the 771 test images were scored at the end. Pruning: L1-magnitude structured pruning with torch-pruning. Quantization: ONNX Runtime static int8, per-channel weights, 256 calibration images. All three models on this page are the 8-bit versions.</p>
+</section>
+
+<footer>Built by <a href="https://readaloush.com">Read Alalloş</a>. Data: “Chest X-ray (Pneumonia, COVID-19, Tuberculosis)” on Kaggle, which combines the pediatric pneumonia set of Kermany et al. (2018), a tuberculosis database and COVID-19 collections. Not a medical device.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<script>
+const CL = ["COVID-19", "Normal", "Pneumonia", "Tuberculosis"], S = 160, MEAN = 0.449, STD = 0.226;
+const MODELS = {full: {parts: [0, 1, 2, 3].map(i => `models/full.int8.part${i}`), name: "ResNet-18", meta: "8-bit · 10.8 MB"},
+                small: {parts: ["models/small.int8.onnx"], name: "70% pruned", meta: "8-bit · 1.0 MB"},
+                edges: {parts: [0, 1, 2, 3].map(i => `models/edges.int8.part${i}`), name: "Trained on the edges only", meta: "never saw the lungs · 8-bit"}};
+const $ = id => document.getElementById(id), film = $("film"), fctx = film.getContext("2d");
+let sess = {}, img = null, hidden = false, samples = [];
+
+function tensor(image, mask) {
+  const c = document.createElement("canvas"); c.width = c.height = S; const g = c.getContext("2d");
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high"; g.drawImage(image, 0, 0, S, S);
+  const d = g.getImageData(0, 0, S, S).data, x = new Float32Array(3 * S * S);
+  for (let i = 0; i < S * S; i++) {
+    let v = (0.299 * d[4*i] + 0.587 * d[4*i+1] + 0.114 * d[4*i+2]) / 255;
+    const r = Math.floor(i / S), q = i % S; if (mask && r >= 24 && r < 136 && q >= 24 && q < 136) v = 0;
+    v = (v - MEAN) / STD; x[i] = x[S*S + i] = x[2*S*S + i] = v;
+  }
+  return new ort.Tensor("float32", x, [1, 3, S, S]);
+}
+const softmax = a => { const m = Math.max(...a), e = a.map(v => Math.exp(v - m)), s = e.reduce((p, q) => p + q, 0); return e.map(v => v / s); };
+
+function drawFilm() {
+  fctx.fillStyle = "#05090C"; fctx.fillRect(0, 0, 640, 640); if (!img) return;
+  fctx.drawImage(img, 0, 0, 640, 640);
+  if (hidden) { fctx.fillStyle = "#000"; fctx.fillRect(96, 96, 448, 448); fctx.strokeStyle = "#B4261C"; fctx.lineWidth = 3; fctx.strokeRect(96, 96, 448, 448); }
+}
+function show(id, key, p, ms) {
+  const k = p.indexOf(Math.max(...p)), m = MODELS[key];
+  $(id).innerHTML = `<h3>${m.name} <small>${m.meta}</small></h3><div class="call">${CL[k]}</div>
+    <div class="bars">${CL.map((c, i) => `<span>${c}</span><div class="t ${i === k ? "top" : ""}"><div class="f" style="width:${(100 * p[i]).toFixed(1)}%"></div></div><span class="v">${(100 * p[i]).toFixed(1)}%</span>`).join("")}</div>
+    <div class="ms">${ms.toFixed(1)} ms in this browser</div>`;
+}
+async function analyse() {
+  if (!img) return; drawFilm();
+  const keys = hidden ? ["edges"] : ["full", "small"];
+  for (const key of keys) {
+    const x = tensor(img, key === "edges"), t0 = performance.now();
+    const out = await sess[key].run({image: x}); const ms = performance.now() - t0;
+    show("m-" + key, key, softmax(Array.from(out.logits.data)), ms);
+  }
+  $("viewer").classList.toggle("hidden-on", hidden);
+}
+function load(src, tag) { const im = new Image(); im.onload = () => { img = im; $("tag").textContent = tag; analyse(); }; im.src = src; }
+
+$("hide").onclick = () => { hidden = !hidden; $("hide").classList.toggle("on", hidden); $("hide").setAttribute("aria-pressed", hidden); $("hide").textContent = hidden ? "Show the lungs" : "Hide the lungs"; analyse(); };
+$("file").onchange = e => { const f = e.target.files[0]; if (!f) return; [...$("thumbs").children].forEach(b => b.setAttribute("aria-pressed", false)); load(URL.createObjectURL(f), "Your image"); };
+
+async function bench() {
+  const x = tensor(img, false), r = {};
+  for (const key of ["full", "small"]) { const t = []; for (let i = 0; i < 25; i++) { const t0 = performance.now(); await sess[key].run({image: x}); t.push(performance.now() - t0); }
+    t.sort((a, b) => a - b); r[key] = t[12]; }
+  $("local").textContent = `On this device, in this browser (one thread, median of 25 runs): ResNet-18 8-bit ${r.full.toFixed(1)} ms, 70% pruned 8-bit ${r.small.toFixed(1)} ms, ${(r.full / r.small).toFixed(1)}× faster.`;
+}
+
+(async () => {
+  ort.env.wasm.numThreads = 1;
+  samples = await (await fetch("samples/samples.json", {cache: "no-cache"})).json();
+  $("thumbs").innerHTML = samples.map((s, i) => `<button style="background-image:url('samples/${s.file}')" aria-pressed="false" aria-label="Sample ${i + 1}, labelled ${s.label.toLowerCase()}"></button>`).join("");
+  [...$("thumbs").children].forEach((b, i) => b.onclick = () => { [...$("thumbs").children].forEach((x, j) => x.setAttribute("aria-pressed", i === j)); load("samples/" + samples[i].file, "Test image · labelled " + samples[i].label.toLowerCase()); });
+  for (const k of Object.keys(MODELS)) {
+    const bufs = await Promise.all(MODELS[k].parts.map(u => fetch(u).then(r => { if (!r.ok) throw new Error(u + " " + r.status); return r.arrayBuffer(); })));
+    const all = new Uint8Array(bufs.reduce((a, b) => a + b.byteLength, 0)); let o = 0; for (const b of bufs) { all.set(new Uint8Array(b), o); o += b.byteLength; }
+    sess[k] = await ort.InferenceSession.create(all, {executionProviders: ["wasm"]});
+  }
+  $("state").textContent = "";
+  $("thumbs").children[0].click();
+  setTimeout(bench, 800);
+})().catch(e => { $("state").textContent = "Could not start: " + e.message; console.error(e); });
+</script>
+</body>
+</html>
