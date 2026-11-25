@@ -1,0 +1,5 @@
+data/
+__pycache__/
+results/onnx/
+results/teacher_*.pt
+results/*.pth
