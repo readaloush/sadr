@@ -60,7 +60,14 @@ What this shows:
 - **Distillation did not help**: 89.1–90.8% with it against 89.8–90.0% without, within noise. One seed per setting.
 - Pruning 30% of channels halves the parameters, but latency fell only from 14.2 to 8.1 ms; the gain grows with the ratio.
 
-In a browser (ONNX Runtime Web, WebAssembly, one thread) on a headless x86 machine, the int8 teacher took 41.7 ms and the 70%-pruned int8 model 6.4 ms per image. The demo measures the same on the visitor's device.
+In a browser (ONNX Runtime Web, WebAssembly, one thread, median of 25 runs per image), measured by the demo page:
+
+| Device | ResNet-18 int8 | 70% pruned int8 | Speed-up |
+|---|---|---|---|
+| x86 server, headless Chrome | 41.7 ms | 6.4 ms | 6.5× |
+| Mac mini, Apple silicon (ARM), Chrome | 35.2 ms | 4.7 ms | 7.5× |
+
+The demo measures the same on each visitor's device.
 
 ## Demo
 
