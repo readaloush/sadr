@@ -260,7 +260,7 @@ async function bench() {
   $("thumbs").innerHTML = samples.map((s, i) => `<button style="background-image:url('samples/${s.file}')" aria-pressed="false" aria-label="Sample ${i + 1}, labelled ${s.label.toLowerCase()}"></button>`).join("");
   [...$("thumbs").children].forEach((b, i) => b.onclick = () => { [...$("thumbs").children].forEach((x, j) => x.setAttribute("aria-pressed", i === j)); load("samples/" + samples[i].file, "Test image · labelled " + samples[i].label.toLowerCase()); });
   for (const k of Object.keys(MODELS)) {
-    const bufs = await Promise.all(MODELS[k].parts.map(u => fetch(u).then(r => { if (!r.ok) throw new Error(u + " " + r.status); return r.arrayBuffer(); })));
+    const bufs = await Promise.all(MODELS[k].parts.map(u => fetch(u + "?v=cam1", {cache: "no-cache"}).then(r => { if (!r.ok) throw new Error(u + " " + r.status); return r.arrayBuffer(); })));
     const all = new Uint8Array(bufs.reduce((a, b) => a + b.byteLength, 0)); let o = 0; for (const b of bufs) { all.set(new Uint8Array(b), o); o += b.byteLength; }
     sess[k] = await ort.InferenceSession.create(all, {executionProviders: ["wasm"]});
   }
