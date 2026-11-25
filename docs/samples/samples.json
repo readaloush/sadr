@@ -1,0 +1,90 @@
+[
+ {
+  "file": "normal_0.jpg",
+  "label": "NORMAL",
+  "source": "test/NORMAL/NORMAL2-IM-0339-0001.jpeg",
+  "ref_full": [
+   0.0,
+   0.9976,
+   0.0024,
+   0.0
+  ]
+ },
+ {
+  "file": "normal_1.jpg",
+  "label": "NORMAL",
+  "source": "test/NORMAL/IM-0031-0001.jpeg",
+  "ref_full": [
+   0.0001,
+   0.9986,
+   0.0012,
+   0.0001
+  ]
+ },
+ {
+  "file": "normal_2.jpg",
+  "label": "NORMAL",
+  "source": "test/NORMAL/IM-0017-0001.jpeg",
+  "ref_full": [
+   0.0008,
+   0.9973,
+   0.0004,
+   0.0016
+  ]
+ },
+ {
+  "file": "normal_3.jpg",
+  "label": "NORMAL",
+  "source": "test/NORMAL/NORMAL2-IM-0222-0001.jpeg",
+  "ref_full": [
+   0.0,
+   0.015,
+   0.985,
+   0.0
+  ]
+ },
+ {
+  "file": "pneumonia_4.jpg",
+  "label": "PNEUMONIA",
+  "source": "test/PNEUMONIA/person136_bacteria_649.jpeg",
+  "ref_full": [
+   0.0001,
+   0.0001,
+   0.9998,
+   0.0
+  ]
+ },
+ {
+  "file": "pneumonia_5.jpg",
+  "label": "PNEUMONIA",
+  "source": "test/PNEUMONIA/person1_virus_11.jpeg",
+  "ref_full": [
+   0.0,
+   0.0,
+   1.0,
+   0.0
+  ]
+ },
+ {
+  "file": "pneumonia_6.jpg",
+  "label": "PNEUMONIA",
+  "source": "test/PNEUMONIA/person21_virus_52.jpeg",
+  "ref_full": [
+   0.0002,
+   0.002,
+   0.9977,
+   0.0
+  ]
+ },
+ {
+  "file": "pneumonia_7.jpg",
+  "label": "PNEUMONIA",
+  "source": "test/PNEUMONIA/person60_virus_117.jpeg",
+  "ref_full": [
+   0.0031,
+   0.0024,
+   0.9944,
+   0.0001
+  ]
+ }
+]
